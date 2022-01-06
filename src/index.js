@@ -10,8 +10,9 @@ export async function getSubtitles({
   lang = 'en',
 }: {
   videoID: string,
-  lang: 'en' | 'de' | 'fr' | void,
+  lang: string | string[] | void,
 }) {
+  let theLang = lang
   const { data } = await axios.get(
     `https://youtube.com/watch?v=${videoID}`
   );
@@ -23,19 +24,39 @@ export async function getSubtitles({
   const regex = /({"captionTracks":.*isTranslatable":(true|false)}])/;
   const [match] = regex.exec(data);
   const { captionTracks } = JSON.parse(`${match}}`);
+  
+  if (Array.isArray(theLang)) {
+    let chosenLang = null
+    theLang.forEach(l => {
+      if (
+        captionTracks.find(({ languageCode }) => languageCode.slice(0, 2) === l)
+      ) {
+        chosenLang = l
+      }
+    })
+    if (!chosenLang) {
+      throw new Error(`Could not find ${theLang} captions for ${videoID}`);
+    } else {
+      theLang = chosenLang
+    }
+  }
+
+  if (!theLang) {
+    theLang = captionTracks[0].languageCode
+  }
 
   const subtitle =
     find(captionTracks, {
-      vssId: `.${lang}`,
+      vssId: `.${theLang}`,
     }) ||
     find(captionTracks, {
-      vssId: `a.${lang}`,
+      vssId: `a.${theLang}`,
     }) ||
-    find(captionTracks, ({ vssId }) => vssId && vssId.match(`.${lang}`));
+    find(captionTracks, ({ vssId }) => vssId && vssId.match(`.${theLang}`));
 
   // * ensure we have found the correct subtitle lang
   if (!subtitle || (subtitle && !subtitle.baseUrl))
-    throw new Error(`Could not find ${lang} captions for ${videoID}`);
+    throw new Error(`Could not find ${theLang} captions for ${videoID}`);
 
   const { data: transcript } = await axios.get(subtitle.baseUrl);
   const lines = transcript
