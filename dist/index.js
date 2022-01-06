@@ -94,7 +94,8 @@ let getSubtitles = exports.getSubtitles = (() => {
       return {
         start,
         dur,
-        text
+        text,
+        lang: theLang
       };
     });
 

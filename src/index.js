@@ -83,6 +83,7 @@ export async function getSubtitles({
         start,
         dur,
         text,
+        lang: theLang
       };
     });
 
